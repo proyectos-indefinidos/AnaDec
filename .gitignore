@@ -1,0 +1,33 @@
+# --- PYTHON ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- ENTORNOS VIRTUALES (Carpetas pesadas) ---
+.venv/
+venv/
+env/
+
+# --- VARIABLES DE ENTORNO (¡SEGURIDAD!) ---
+.env
+.env.local
+
+# --- IDEs y EDITORES ---
+.vscode/
+.idea/
+*.swp
+
+# --- SISTEMA OPERATIVO ---
+.DS_Store
+Thumbs.db
+
+# --- DOCKER (Opcional, si generas logs) ---
+*.log
+
+# --- FLET / BUILDS ---
+build/
+dist/
+
+# --- STARUML (Opcional) ---
+# Ignorar backups de StarUML, pero dejar el modelo principal
+*.bak

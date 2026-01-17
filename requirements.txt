@@ -1,0 +1,14 @@
+# Ciencia de Datos y Matemáticas
+pandas          #tablas de amortización y manejo de datos
+numpy           #Dependencia de pandas, útil para cálculos vectoriales
+numpy-financial #Trae las fórmulas financieras (TIR, VPN, Pago)
+
+# Interfaz Gráfica (Tu Frontend)
+flet            #crear la app ejecutable y web sin CSS
+
+# Gráficos 
+plotly          #gráficos interactivos dentro de Flet
+
+# Utilidades y Calidad de Código 
+black           #formatear código automáticamente
+pytest          #pruebas unitarias después
