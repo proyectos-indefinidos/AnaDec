@@ -1,5 +1,4 @@
-# src/main.py
-import flet as ft
+import flet as ft   
 
 def main(page: ft.Page):
     page.title = "AnaDec - Prototipo"

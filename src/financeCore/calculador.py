@@ -1,5 +1,7 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+import pandas as pd
+
+from financeCore import tasaInteres
+
 
 class Calculador:
     """
@@ -9,11 +11,11 @@ class Calculador:
     def __init__(self):
         self.dias_por_anio = 360
 
-    def calcular_cuota_fija(self, monto, tasa, plazos):
+    def calcular_cuota_fija(self, monto: float, tasa: tasaInteres, plazos: int):
         pass
 
-    def generar_tabla_amortizacion(self, monto, tasa, plazos):
+    def generar_tabla_amortizacion(self, monto: float, tasa: tasaInteres, plazos: int):
         pass
 
-    def calcular_retorno_inversion(self, inversion, tasa, tiempo_meses):
+    def calcular_retorno_inversion(self, inversion: float, tasa: tasaInteres, tiempo_meses: int) -> float:
         pass
