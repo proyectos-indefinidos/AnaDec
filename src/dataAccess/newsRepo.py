@@ -1,10 +1,9 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
 
 class NewsRepo:
-    """Clase de Servicio (StateFul). Almacena las noticias mediante API de noticias(TBD), de esa forma, se almacenan dentro del cache."""
+    """Clase de Servicio (StateFul). Almacena las noticias mediante API de noticias(TBD), 
+    de esa forma, se almacenan dentro del cache."""
     def __init__(self):
-        self.API_KEY = None
+        self.api_key = None
         self.cache_noticias = None
         self.last_update = None
 
