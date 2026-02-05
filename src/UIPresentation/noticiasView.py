@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 """
 Módulo de Vista para Noticias.
 Se encarga de renderizar los datos financieros en controles de Flet.
@@ -39,10 +42,6 @@ class NoticiasView:
             fuente = row.get("Fuente", "Fuente desconocida")
             fecha = row.get("Fecha", "")
             desc = row.get("Descripción", "Haz clic para leer más...")
-
-            # Validación extra por si la API devuelve None explícito
-            if desc is None:
-                desc = "Sin descripción disponible."
 
             tarjeta = ft.Card(
                 elevation=5,
