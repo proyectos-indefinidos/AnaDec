@@ -11,4 +11,7 @@ plotly          #gráficos interactivos dentro de Flet
 
 # Utilidades y Calidad de Código 
 black           #formatear código automáticamente
-pytest          #pruebas unitarias después
+pytest
+
+python-dotenv
+requests          #pruebas unitarias después
