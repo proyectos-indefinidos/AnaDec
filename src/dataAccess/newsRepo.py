@@ -2,11 +2,10 @@ import os
 import logging
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
+# Configurar logging para este módulo
 logger = logging.getLogger(__name__)
 
 # Cargar variables de entorno
@@ -94,7 +93,7 @@ class NewsRepo:
                 })
 
             self.cache_noticias = pd.DataFrame(noticias_limpias)
-            self.last_update = datetime.now()
+            self.last_update = datetime.now(timezone.utc)
             
             return self.cache_noticias
 
@@ -107,7 +106,7 @@ class NewsRepo:
         if self.last_update is None or self.cache_noticias.empty:
             return False
         
-        time_since_update = datetime.now() - self.last_update
+        time_since_update = datetime.now(timezone.utc) - self.last_update
         return time_since_update.total_seconds() / 60 < self.cache_duration_minutes
 
     def force_update(self):
