@@ -22,13 +22,11 @@ class NewsRepo:
     Clase de Servicio (StateFul). 
     Encapsula la lógica de obtención de noticias financieras.
     """
-    
-    # DEFINIMOS EL TEMA POR DEFECTO AQUÍ (CONSTANTE DE CLASE)
-    # Esto centraliza la configuración de búsqueda.
-    DEFAULT_TOPIC = "(tasa de interés OR banco central OR inflación OR pib OR economia) AND economia"
+
+    DEFAULT_TOPIC = "(tasa de interés OR banco central OR inflación OR pib OR economia) AND sexo"
 
     def __init__(self):
-        self.api_key = os.getenv("NEWS_API_KEY")
+        self.api_key = os.getenv("NEWS_KEY")
         self.cache_noticias: pd.DataFrame = pd.DataFrame()
         self.last_update: Optional[datetime] = None
         self.base_url = "https://newsapi.org/v2/everything"
@@ -61,10 +59,10 @@ class NewsRepo:
                 'sortBy': 'publishedAt',
                 'pageSize': 20
             }
-            
+
             response = requests.get(self.base_url, params=params, timeout=10)
             response.raise_for_status()
-            
+
             data = response.json()
             articles = data.get('articles', [])
 
@@ -81,10 +79,10 @@ class NewsRepo:
                         fecha_dt = datetime.fromisoformat(published_raw.replace("Z", "+00:00"))
                         fecha = fecha_dt.date().isoformat()
                     except ValueError:
-                        # Como respaldo, usar los primeros 10 caracteres solo si la cadena es suficientemente larga
+# Como respaldo, usar los primeros 10 caracteres solo si la cadena es suficientemente larga
                         if len(published_raw) >= 10:
                             fecha = published_raw[:10]
-                
+
                 noticias_limpias.append({
                     "Fecha": fecha,
                     "Fuente": art.get("source", {}).get("name", "Desconocido"),
@@ -94,7 +92,7 @@ class NewsRepo:
 
             self.cache_noticias = pd.DataFrame(noticias_limpias)
             self.last_update = datetime.now(timezone.utc)
-            
+
             return self.cache_noticias
 
         except requests.RequestException as e:
@@ -105,7 +103,7 @@ class NewsRepo:
         """Verifica si el caché es válido basándose en la última actualización."""
         if self.last_update is None or self.cache_noticias.empty:
             return False
-        
+
         time_since_update = datetime.now(timezone.utc) - self.last_update
         return time_since_update.total_seconds() / 60 < self.cache_duration_minutes
 
@@ -113,3 +111,18 @@ class NewsRepo:
         """Limpia el caché para obligar a una nueva descarga."""
         self.cache_noticias = pd.DataFrame()
         self.last_update = None
+
+##Testing aislado para newsrepo
+
+if __name__ == "__main__":
+    print("Test Start")
+    repo_prueba = NewsRepo()
+    print("Downloading news ---->")
+    df_resultado = repo_prueba.get_noticias()
+    if not df_resultado.empty:
+        print(f"\n{len(df_resultado)} noticias descargadas:")
+        print("-" * 50)
+        print(df_resultado[['Fecha', 'Fuente', 'Título']].head(3).to_string(index=False))
+        print("-" * 50)
+    else:
+        print("\nFallo: El DataFrame está vacío. Revisa tu API Key o conexión.")
