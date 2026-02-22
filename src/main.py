@@ -1,10 +1,21 @@
-import flet as ft   
+import flet as ft
+try:
+    from src.UIPresentation.mainApp import MainApp
+except ModuleNotFoundError:
+    from UIPresentation.mainApp import MainApp
 
 def main(page: ft.Page):
-    page.title = "AnaDec - Prototipo"
-    page.add(ft.Text(value="El contenedor de Docker está funcionando.", size=30))
-    page.update()
+    app = MainApp()
+    app.page = page
+    app.build_ui()
 
-# CAMBIO AQUÍ: Quitamos 'view=ft.WEB_BROWSER'
-# Docker ya sabe qué hacer gracias a las variables de entorno.
-ft.app(target=main, port=8080)
+if __name__ == "__main__":
+    runner = getattr(ft, "run", None)
+    if callable(runner):
+        runner(main)
+    else:
+        ft.app(
+            target=main,
+            host="0.0.0.0",
+            port=8080
+        )

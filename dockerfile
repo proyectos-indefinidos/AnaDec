@@ -6,4 +6,5 @@ COPY src ./src
 EXPOSE 8080
 ENV FLET_SERVER_PORT=8080
 ENV FLET_FORCE_WEB_SERVER=1
+ENV PYTHONPATH=/app/src
 CMD ["python", "-m", "src.main"]
