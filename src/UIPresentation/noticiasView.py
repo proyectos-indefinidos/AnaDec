@@ -17,6 +17,15 @@ class NoticiasView:
 
     # NOTA: Borramos el __init__ porque estaba vacío.
     # Python usa el constructor por defecto automáticamente.
+    @staticmethod
+    def _safe_icon(name: str, fallback: str = "HELP_OUTLINE"):
+        icon = getattr(ft.icons, name, None)
+        if icon is not None:
+            return icon
+        icon = getattr(ft.icons, fallback, None)
+        if icon is not None:
+            return icon
+        return "help_outline"
 
     def list_tarjetas(self, noticias_df: pd.DataFrame) -> ft.Control:
         """
@@ -25,11 +34,16 @@ class NoticiasView:
         # 1. Validación de Tabla Vacía o Nula
         if noticias_df is None or noticias_df.empty:
             return ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.icons.WARNING_AMBER_ROUNDED, color="orange", size=40),
-                    ft.Text("No hay noticias financieras recientes.", color="grey")
-                ], alignment=ft.MainAxisAlignment.CENTER),
-                alignment=ft.alignment.center,
+                content=ft.Column(
+                    [
+                        ft.Icon(self._safe_icon("WARNING_AMBER_ROUNDED", "WARNING"), color="#F59E0B", size=40),
+                        ft.Text("No hay noticias financieras recientes.", color="#64748B"),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=8,
+                ),
+                expand=True,
                 padding=20
             )
 
@@ -44,33 +58,41 @@ class NoticiasView:
             desc = row.get("Descripción", "Haz clic para leer más...")
 
             tarjeta = ft.Card(
-                elevation=5,
-                margin=10,
+                elevation=1,
+                margin=ft.margin.symmetric(vertical=6, horizontal=2),
                 content=ft.Container(
-                    padding=10,
+                    bgcolor="#F8FAFC",
+                    border_radius=12,
+                    padding=12,
                     content=ft.Column(
                         [
                             ft.ListTile(
-                                leading=ft.Icon(ft.icons.MONETIZATION_ON, color="green"),
+                                leading=ft.Container(
+                                    bgcolor="#DCFCE7",
+                                    border_radius=8,
+                                    padding=8,
+                                    content=ft.Icon(self._safe_icon("MONETIZATION_ON", "ATTACH_MONEY"), color="#16A34A"),
+                                ),
                                 title=ft.Text(
                                     titulo,
-                                    weight="bold",
+                                    weight=ft.FontWeight.BOLD,
                                     max_lines=2,
                                     overflow=ft.TextOverflow.ELLIPSIS
                                 ),
-                                subtitle=ft.Text(f"{fuente} • {fecha}", size=12, italic=True),
+                                subtitle=ft.Text(f"{fuente} • {fecha}", size=12, color="#64748B", italic=True),
                             ),
                             ft.Container(
                                 content=ft.Text(
                                     desc,
                                     size=13,
+                                    color="#334155",
                                     max_lines=3,
                                     overflow=ft.TextOverflow.ELLIPSIS
                                 ),
                                 padding=ft.padding.only(left=15, right=15, bottom=10)
                             )
                         ],
-                        spacing=5
+                        spacing=6
                     )
                 )
             )
