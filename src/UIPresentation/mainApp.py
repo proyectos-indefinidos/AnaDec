@@ -6,15 +6,21 @@ import pandas as pd
 
 try:
     from dataAccess.newsRepo import NewsRepo
+    from financeCore.convertidor import Convertidor
     from financeCore.calculador import Calculador
     from financeCore.comparador import Comparador
     from financeCore.tasa_interes import TasaInteres
+    from UIPresentation.convertidorView import ConvertidorView
+    from UIPresentation.homeView import HomeView
     from UIPresentation.noticiasView import NoticiasView
 except ModuleNotFoundError:
     from src.dataAccess.newsRepo import NewsRepo
+    from src.financeCore.convertidor import Convertidor
     from src.financeCore.calculador import Calculador
     from src.financeCore.comparador import Comparador
     from src.financeCore.tasa_interes import TasaInteres
+    from src.UIPresentation.convertidorView import ConvertidorView
+    from src.UIPresentation.homeView import HomeView
     from src.UIPresentation.noticiasView import NoticiasView
 
 
@@ -23,12 +29,20 @@ class MainApp:
         self.page: ft.Page | None = None
 
         # Servicios / Core
+        self.convertidor = Convertidor()
         self.calculador = Calculador()
         self.comparador = Comparador()
         self.servicio_noticias = NewsRepo()
 
         # Presentación
+        self.home_view = HomeView()
         self.noticias_view = NoticiasView()
+        self.convertidor_view = ConvertidorView(
+            convertidor=self.convertidor,
+            tasa_builder=self._build_tasa,
+            period_to_months=self._period_to_months,
+            show_error=self.mostrar_error,
+        )
 
         # Estado de navegación
         self.current_view = 0
@@ -154,9 +168,26 @@ class MainApp:
         )
 
         self.nav_buttons = [
-            ft.OutlinedButton("Cálculos", on_click=lambda e: self.cambiar_vista(0)),
-            ft.OutlinedButton("Comparar", on_click=lambda e: self.cambiar_vista(1)),
-            ft.OutlinedButton("Noticias", on_click=lambda e: self.cambiar_vista(2)),
+            ft.OutlinedButton(
+                "Home",
+                icon=self._safe_icon("HOME", "HOME_OUTLINED"),
+                on_click=lambda e: self.cambiar_vista(0),
+            ),
+            ft.OutlinedButton(
+                "Convertidor",
+                icon=self._safe_icon("SWAP_HORIZ", "SYNC"),
+                on_click=lambda e: self.cambiar_vista(1),
+            ),
+            ft.OutlinedButton(
+                "Comparador",
+                icon=self._safe_icon("COMPARE_ARROWS", "BALANCE"),
+                on_click=lambda e: self.cambiar_vista(2),
+            ),
+            ft.OutlinedButton(
+                "Noticias",
+                icon=self._safe_icon("NEWSPAPER", "ARTICLE"),
+                on_click=lambda e: self.cambiar_vista(3),
+            ),
         ]
 
         nav_bar = ft.Container(
@@ -180,6 +211,10 @@ class MainApp:
 
         self.page.add(body)
         self.cambiar_vista(0)
+
+    @staticmethod
+    def _safe_icon(name: str, fallback: str) -> str:
+        return getattr(ft.icons, name, getattr(ft.icons, fallback, fallback))
 
     def _card(self, title: str, subtitle: str, content: ft.Control) -> ft.Control:
         return ft.Container(
@@ -227,10 +262,12 @@ class MainApp:
             btn.disabled = (i == index)
 
         if index == 0:
-            self.content.content = self._view_calculos()
+            self.content.content = self._view_home()
         elif index == 1:
-            self.content.content = self._view_comparador()
+            self.content.content = self._view_convertidor()
         elif index == 2:
+            self.content.content = self._view_comparador()
+        elif index == 3:
             self.content.content = self._view_noticias()
         else:
             self.content.content = ft.Text("Vista no implementada")
@@ -247,6 +284,19 @@ class MainApp:
         self.page.update()
 
     # ---------- VISTAS ----------
+
+    def _view_home(self) -> ft.Control:
+        return self.home_view.build(
+            on_nav=self.cambiar_vista,
+            card_builder=self._card,
+        )
+
+    def _view_convertidor(self) -> ft.Control:
+        assert self.page is not None
+        return self.convertidor_view.build(
+            page=self.page,
+            card_builder=self._card,
+        )
 
     def _view_calculos(self) -> ft.Control:
         try:
@@ -503,8 +553,8 @@ class MainApp:
             ),
         }
         self.comparador_rows.append(row)
-        if self.current_view == 1 and self.page is not None:
-            self.cambiar_vista(1)
+        if self.current_view == 2 and self.page is not None:
+            self.cambiar_vista(2)
 
     def _comp_row_ui(self, row: dict) -> ft.Control:
         del_btn = ft.IconButton(
@@ -536,8 +586,8 @@ class MainApp:
 
     def _remove_comp_row(self, row: dict):
         self.comparador_rows = [r for r in self.comparador_rows if r is not row]
-        if self.current_view == 1 and self.page is not None:
-            self.cambiar_vista(1)
+        if self.current_view == 2 and self.page is not None:
+            self.cambiar_vista(2)
 
     def _run_comp(self, modo: str):
         try:
