@@ -1,0 +1,12 @@
+{
+  "name": "anadec-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:api": "cd apps/api && pip install -r requirements.txt && uvicorn src.main:app --reload --port 8000",
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
