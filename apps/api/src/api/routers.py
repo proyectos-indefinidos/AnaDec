@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
-from .adapters import map_rate_spec_to_payload
+from .adapters import map_period_to_months, map_rate_spec_to_tasainteres
 from .schemas import (
     CompareRequest,
     CompareResponse,
@@ -13,6 +15,15 @@ from .schemas import (
     NewsItem,
     NewsResponse,
 )
+
+# Permite reutilizar el dominio existente en /src/financeCore desde apps/api.
+_ROOT_SRC = Path(__file__).resolve().parents[4] / "src"
+if str(_ROOT_SRC) not in sys.path:
+    sys.path.append(str(_ROOT_SRC))
+
+from financeCore.comparador import Comparador
+from financeCore.convertidor import Convertidor
+from financeCore.tasa_interes import TasaInteres
 
 router = APIRouter()
 
@@ -50,23 +61,46 @@ def _dummy_news(category: str | None) -> list[NewsItem]:
 @router.post("/convert", response_model=ConvertResponse)
 def convert_rate(payload: ConvertRequest) -> ConvertResponse:
     try:
-        source = map_rate_spec_to_payload(payload.from_rate)
-
-        # Stub temporal hasta integrar financeCore en apps/api.
-        converted_value = round(float(source["value_percent"]) * 1.02, 6)
-        effective_annual = round(converted_value * 1.01, 6)
+        convertidor = Convertidor()
+        tasa_origen = map_rate_spec_to_tasainteres(payload.from_rate)
+        ea_origen = convertidor.tasa_a_ea_std(tasa_origen)
+        tasa_ea = TasaInteres(valor=ea_origen, periodo=12, tipo="efectiva", es_anticipada=False)
 
         details = [
-            "Se valido la tasa de origen.",
-            "Se normalizo el periodo de entrada.",
-            "Se genero una conversion temporal de ejemplo.",
+            "Se validó la tasa de origen.",
+            "Se estandarizó la tasa a efectiva anual (EA).",
         ]
 
+        if payload.to_rate_type == "EFFECTIVE":
+            target_months = map_period_to_months(payload.to_period)
+            tasa_destino = convertidor.cambiar_temporalidad_en_efectivo(tasa_ea, target_months)
+            details.append("Se convirtió la EA a tasa efectiva del período solicitado.")
+        else:
+            if payload.to_nominal_capitalization_period is None:
+                raise ValueError(
+                    "to_nominal_capitalization_period is required when to_rate_type is NOMINAL"
+                )
+
+            nominal_months = map_period_to_months(payload.to_period)
+            cap_months = map_period_to_months(payload.to_nominal_capitalization_period)
+
+            periodic_effective = convertidor.cambiar_temporalidad_en_efectivo(tasa_ea, cap_months)
+            tasa_destino = convertidor.efectiva_periodica_a_nominal(
+                tasa=periodic_effective,
+                periodo_nominal=nominal_months,
+                periodo_capitalizacion=cap_months,
+                es_anticipada=False,
+            )
+            details.append("Se convirtió la EA a efectiva periódica de capitalización.")
+            details.append("Se transformó la efectiva periódica a nominal según los períodos solicitados.")
+
+        ea_destino = convertidor.tasa_a_ea_std(tasa_destino)
+
         return ConvertResponse(
-            converted_value=converted_value,
+            converted_value=round(tasa_destino.valor * 100.0, 6),
             to_rate_type=payload.to_rate_type,
             to_period=payload.to_period,
-            effective_annual=effective_annual,
+            effective_annual=round(ea_destino * 100.0, 6),
             details=details,
         )
     except ValueError as ex:
@@ -78,15 +112,27 @@ def convert_rate(payload: ConvertRequest) -> ConvertResponse:
 @router.post("/compare", response_model=CompareResponse)
 def compare_rates(payload: CompareRequest) -> CompareResponse:
     try:
-        a = map_rate_spec_to_payload(payload.option_a)
-        b = map_rate_spec_to_payload(payload.option_b)
+        tasa_a = map_rate_spec_to_tasainteres(payload.option_a)
+        tasa_b = map_rate_spec_to_tasainteres(payload.option_b)
+        comparador = Comparador()
 
-        # Stub temporal hasta integrar financeCore en apps/api.
-        ea_a = round(float(a["value_percent"]) * 1.01, 6)
-        ea_b = round(float(b["value_percent"]) * 1.01, 6)
+        df = comparador.comparar_escenarios(
+            [
+                {"nombre": "__A__", "tasa": tasa_a},
+                {"nombre": "__B__", "tasa": tasa_b},
+            ]
+        )
+
+        row_a = df[df["Nombre"] == "__A__"]
+        row_b = df[df["Nombre"] == "__B__"]
+        if row_a.empty or row_b.empty:
+            raise ValueError("Could not extract compared options from ranking result")
+
+        ea_a = float(row_a.iloc[0]["EA"]) * 100.0
+        ea_b = float(row_b.iloc[0]["EA"]) * 100.0
         difference = round(abs(ea_a - ea_b), 6)
 
-        if difference == 0:
+        if difference <= 1e-12:
             winner = "TIE"
             summary = f"{payload.option_a_name} y {payload.option_b_name} son equivalentes."
         elif ea_a < ea_b:
@@ -98,14 +144,14 @@ def compare_rates(payload: CompareRequest) -> CompareResponse:
 
         details = [
             "Se validaron ambas tasas recibidas.",
-            "Se estandarizaron ambas opciones a un formato comparable.",
-            "Se calculo la diferencia y se determino una opcion ganadora.",
+            "Se estandarizaron ambas opciones a EA con el motor financiero.",
+            "Se compararon los resultados y se determinó la opción ganadora.",
         ]
 
         return CompareResponse(
             winner=winner,
-            effective_annual_a=ea_a,
-            effective_annual_b=ea_b,
+            effective_annual_a=round(ea_a, 6),
+            effective_annual_b=round(ea_b, 6),
             difference=difference,
             summary=summary,
             details=details,
