@@ -5,59 +5,105 @@ import { Calculator, ChevronDown } from "lucide-react";
 
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import { apiPost } from "@/lib/api";
 
-type RateType = "ea" | "nm" | "na" | "em" | "et";
+type ApiRateType = "EFFECTIVE" | "NOMINAL";
+type ApiPeriod = "MONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL";
 
-const rateTypes: { value: RateType; label: string }[] = [
-  { value: "ea", label: "Efectiva anual" },
-  { value: "em", label: "Efectiva mensual" },
-  { value: "et", label: "Efectiva trimestral" },
-  { value: "na", label: "Nominal anual" },
-  { value: "nm", label: "Nominal mensual" },
+type RateSpec = {
+  value: number;
+  rate_type: ApiRateType;
+  period: ApiPeriod;
+  nominal_capitalization_period?: ApiPeriod;
+};
+
+type ConvertRequest = {
+  from_rate: RateSpec;
+  to_rate_type: ApiRateType;
+  to_period: ApiPeriod;
+  to_nominal_capitalization_period?: ApiPeriod;
+};
+
+type ConvertResponse = {
+  converted_value: number;
+  to_rate_type: ApiRateType;
+  to_period: ApiPeriod;
+  effective_annual: number;
+  details: string[];
+};
+
+const RATE_TYPE_OPTIONS: { value: ApiRateType; label: string }[] = [
+  { value: "EFFECTIVE", label: "Efectiva" },
+  { value: "NOMINAL", label: "Nominal" },
 ];
+
+const PERIOD_OPTIONS: { value: ApiPeriod; label: string }[] = [
+  { value: "MONTHLY", label: "Mensual" },
+  { value: "QUARTERLY", label: "Trimestral" },
+  { value: "SEMIANNUAL", label: "Semestral" },
+  { value: "ANNUAL", label: "Anual" },
+];
+
+function periodLabel(value: ApiPeriod): string {
+  return PERIOD_OPTIONS.find((p) => p.value === value)?.label ?? value;
+}
 
 export default function ConvertidorPage() {
   const [inputRate, setInputRate] = useState("");
-  const [fromType, setFromType] = useState<RateType>("ea");
-  const [toType, setToType] = useState<RateType>("em");
-  const [result, setResult] = useState<number | null>(null);
+
+  const [fromRateType, setFromRateType] = useState<ApiRateType>("EFFECTIVE");
+  const [fromPeriod, setFromPeriod] = useState<ApiPeriod>("ANNUAL");
+  const [fromNominalCap, setFromNominalCap] = useState<ApiPeriod>("MONTHLY");
+
+  const [toRateType, setToRateType] = useState<ApiRateType>("EFFECTIVE");
+  const [toPeriod, setToPeriod] = useState<ApiPeriod>("MONTHLY");
+  const [toNominalCap, setToNominalCap] = useState<ApiPeriod>("MONTHLY");
+
+  const [response, setResponse] = useState<ConvertResponse | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const selectedFrom = useMemo(
-    () => rateTypes.find((t) => t.value === fromType)?.label.toLowerCase() ?? "",
-    [fromType],
-  );
-  const selectedTo = useMemo(
-    () => rateTypes.find((t) => t.value === toType)?.label.toLowerCase() ?? "",
-    [toType],
-  );
+  const toLabel = useMemo(() => {
+    const base = `${toRateType === "EFFECTIVE" ? "Efectiva" : "Nominal"} ${periodLabel(toPeriod)}`;
+    if (toRateType === "NOMINAL") {
+      return `${base} (cap. ${periodLabel(toNominalCap)})`;
+    }
+    return base;
+  }, [toRateType, toPeriod, toNominalCap]);
 
-  const onConvert = () => {
+  const onConvert = async () => {
     const rate = parseFloat(inputRate);
-    if (Number.isNaN(rate)) return;
+    if (Number.isNaN(rate)) {
+      setError("Ingresa una tasa válida.");
+      return;
+    }
 
-    let effectiveAnnual = rate;
+    setLoading(true);
+    setError(null);
 
-    if (fromType === "em") effectiveAnnual = (Math.pow(1 + rate / 100, 12) - 1) * 100;
-    if (fromType === "et") effectiveAnnual = (Math.pow(1 + rate / 100, 4) - 1) * 100;
-    if (fromType === "na") effectiveAnnual = (Math.pow(1 + rate / 1200, 12) - 1) * 100;
-    if (fromType === "nm") effectiveAnnual = (Math.pow(1 + rate / 100, 12) - 1) * 100;
+    try {
+      const req: ConvertRequest = {
+        from_rate: {
+          value: rate,
+          rate_type: fromRateType,
+          period: fromPeriod,
+          ...(fromRateType === "NOMINAL" ? { nominal_capitalization_period: fromNominalCap } : {}),
+        },
+        to_rate_type: toRateType,
+        to_period: toPeriod,
+        ...(toRateType === "NOMINAL" ? { to_nominal_capitalization_period: toNominalCap } : {}),
+      };
 
-    let convertedRate = effectiveAnnual;
-    if (toType === "em") convertedRate = (Math.pow(1 + effectiveAnnual / 100, 1 / 12) - 1) * 100;
-    if (toType === "et") convertedRate = (Math.pow(1 + effectiveAnnual / 100, 1 / 4) - 1) * 100;
-    if (toType === "na") convertedRate = (Math.pow(1 + effectiveAnnual / 100, 1 / 12) - 1) * 1200;
-    if (toType === "nm") convertedRate = (Math.pow(1 + effectiveAnnual / 100, 1 / 12) - 1) * 100;
-
-    setResult(convertedRate);
+      const data = await apiPost<ConvertResponse>("/api/convert", req);
+      setResponse(data);
+    } catch (err) {
+      setResponse(null);
+      setError(err instanceof Error ? err.message : "No se pudo convertir la tasa.");
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const explanation =
-    result == null
-      ? ""
-      : toType === "em" || toType === "nm"
-        ? `Esto significa que cada mes pagarías o ganarías aproximadamente ${result.toFixed(4)}% sobre el capital.`
-        : `Tu tasa ${selectedTo} sería de ${result.toFixed(4)}%.`;
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
@@ -85,50 +131,97 @@ export default function ConvertidorPage() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-lg font-medium">Tipo de tasa actual</label>
+            <div className="space-y-3 rounded-xl border border-slate-200 p-4">
+              <p className="text-lg font-medium">Tasa origen</p>
               <select
-                value={fromType}
-                onChange={(e) => setFromType(e.target.value as RateType)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-4 text-lg outline-none focus:border-blue-400"
+                value={fromRateType}
+                onChange={(e) => setFromRateType(e.target.value as ApiRateType)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base outline-none focus:border-blue-400"
               >
-                {rateTypes.map((type) => (
+                {RATE_TYPE_OPTIONS.map((type) => (
                   <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
               </select>
+
+              <select
+                value={fromPeriod}
+                onChange={(e) => setFromPeriod(e.target.value as ApiPeriod)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base outline-none focus:border-blue-400"
+              >
+                {PERIOD_OPTIONS.map((period) => (
+                  <option key={period.value} value={period.value}>{period.label}</option>
+                ))}
+              </select>
+
+              {fromRateType === "NOMINAL" && (
+                <select
+                  value={fromNominalCap}
+                  onChange={(e) => setFromNominalCap(e.target.value as ApiPeriod)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base outline-none focus:border-blue-400"
+                >
+                  {PERIOD_OPTIONS.map((period) => (
+                    <option key={period.value} value={period.value}>Capitalización {period.label}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
-            <div className="space-y-3">
-              <label className="text-lg font-medium">Convertir a</label>
+            <div className="space-y-3 rounded-xl border border-slate-200 p-4">
+              <p className="text-lg font-medium">Convertir a</p>
               <select
-                value={toType}
-                onChange={(e) => setToType(e.target.value as RateType)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-4 text-lg outline-none focus:border-blue-400"
+                value={toRateType}
+                onChange={(e) => setToRateType(e.target.value as ApiRateType)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base outline-none focus:border-blue-400"
               >
-                {rateTypes.map((type) => (
+                {RATE_TYPE_OPTIONS.map((type) => (
                   <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
               </select>
+
+              <select
+                value={toPeriod}
+                onChange={(e) => setToPeriod(e.target.value as ApiPeriod)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base outline-none focus:border-blue-400"
+              >
+                {PERIOD_OPTIONS.map((period) => (
+                  <option key={period.value} value={period.value}>{period.label}</option>
+                ))}
+              </select>
+
+              {toRateType === "NOMINAL" && (
+                <select
+                  value={toNominalCap}
+                  onChange={(e) => setToNominalCap(e.target.value as ApiPeriod)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base outline-none focus:border-blue-400"
+                >
+                  {PERIOD_OPTIONS.map((period) => (
+                    <option key={period.value} value={period.value}>Capitalización {period.label}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <Button
               onClick={onConvert}
+              disabled={loading}
               size="lg"
               className="w-full rounded-xl bg-blue-600 py-6 text-lg text-white shadow-lg shadow-blue-200 hover:bg-blue-700"
             >
               <Calculator className="h-5 w-5" />
-              Convertir
+              {loading ? "Convirtiendo..." : "Convertir"}
             </Button>
+
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
           </div>
 
-          {result != null && (
+          {response && (
             <div className="mt-8 rounded-2xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-green-50 p-6">
               <div className="mb-4 text-center">
                 <p className="mb-2 text-lg text-gray-600">Equivale a:</p>
-                <p className="text-4xl text-blue-600">{result.toFixed(4)}%</p>
-                <p className="mt-1 text-gray-500">{rateTypes.find((t) => t.value === toType)?.label}</p>
+                <p className="text-4xl text-blue-600">{response.converted_value.toFixed(4)}%</p>
+                <p className="mt-1 text-gray-500">{toLabel}</p>
               </div>
-              <p className="mb-4 text-center text-gray-600">{explanation}</p>
+              <p className="mb-4 text-center text-gray-600">EA equivalente: {response.effective_annual.toFixed(4)}%</p>
 
               <button
                 onClick={() => setShowDetails((v) => !v)}
@@ -140,12 +233,11 @@ export default function ConvertidorPage() {
 
               {showDetails && (
                 <div className="mt-4 rounded-xl bg-white p-4 text-sm text-gray-600">
-                  <p className="mb-2">
-                    <strong>Paso 1:</strong> Se convirtio la tasa {selectedFrom} ({inputRate}%) a efectiva anual.
-                  </p>
-                  <p>
-                    <strong>Paso 2:</strong> Se convirtio la efectiva anual a {selectedTo}, obteniendo {result.toFixed(4)}%.
-                  </p>
+                  {response.details.map((line, idx) => (
+                    <p key={`${line}-${idx}`} className={idx < response.details.length - 1 ? "mb-2" : ""}>
+                      <strong>Paso {idx + 1}:</strong> {line}
+                    </p>
+                  ))}
                 </div>
               )}
             </div>
