@@ -21,6 +21,7 @@ _ROOT_SRC = Path(__file__).resolve().parents[4] / "src"
 if str(_ROOT_SRC) not in sys.path:
     sys.path.append(str(_ROOT_SRC))
 
+from dataAccess.newsRepo import NewsRepo
 from financeCore.comparador import Comparador
 from financeCore.convertidor import Convertidor
 from financeCore.tasa_interes import TasaInteres
@@ -31,31 +32,28 @@ _NEWS_CACHE_TTL = timedelta(minutes=15)
 _news_cache: dict[str, dict[str, object]] = {}
 
 
-def _dummy_news(category: str | None) -> list[NewsItem]:
-    tag = (category or "general").strip() or "general"
-    return [
-        NewsItem(
-            title="Tasas del mercado hoy",
-            summary=f"Resumen rapido de movimientos recientes en categoria {tag}.",
-            source="AnaDec Demo",
-            date="2026-02-22",
-            url="https://example.com/news/market-rates",
-        ),
-        NewsItem(
-            title="Inflacion y decisiones financieras",
-            summary="Puntos clave para entender el impacto en creditos e inversiones.",
-            source="AnaDec Demo",
-            date="2026-02-22",
-            url="https://example.com/news/inflation-impact",
-        ),
-        NewsItem(
-            title="Como comparar dos opciones de tasa",
-            summary="Guia corta para evaluar costos y rentabilidad.",
-            source="AnaDec Demo",
-            date="2026-02-22",
-            url="https://example.com/news/compare-rates",
-        ),
-    ]
+def _df_to_news_items(df) -> list[NewsItem]:
+    items: list[NewsItem] = []
+    for _, row in df.iterrows():
+        title = str(row.get("Título", row.get("Title", "")) or "").strip()
+        summary = str(row.get("Descripción", row.get("Description", "")) or "").strip()
+        source = str(row.get("Fuente", row.get("Source", "")) or "").strip()
+        date = str(row.get("Fecha", row.get("Date", "")) or "").strip()
+        url = str(
+            row.get("URL", row.get("Url", row.get("url", row.get("Link", row.get("link", "")))))
+            or ""
+        ).strip()
+
+        items.append(
+            NewsItem(
+                title=title,
+                summary=summary,
+                source=source,
+                date=date,
+                url=url,
+            )
+        )
+    return items
 
 
 @router.post("/convert", response_model=ConvertResponse)
@@ -169,7 +167,7 @@ def get_news(category: str | None = None) -> NewsResponse:
     cached = _news_cache.get(cache_key)
 
     if cached is not None:
-        cached_at = cached.get("generated_at")
+        cached_at = cached.get("fetched_at")
         if isinstance(cached_at, datetime) and now - cached_at <= _NEWS_CACHE_TTL:
             return NewsResponse(
                 items=cached.get("items", []),  # type: ignore[arg-type]
@@ -178,13 +176,26 @@ def get_news(category: str | None = None) -> NewsResponse:
             )
 
     try:
-        items = _dummy_news(category)
-        response = NewsResponse(items=items, stale=False, generated_at=now)
-        _news_cache[cache_key] = {"items": items, "generated_at": now}
-        return response
+        repo = NewsRepo()
+        df = repo.get_noticias(filtro=category.strip() if category else None)
+        if df is None:
+            raise ValueError("No se recibieron datos de noticias.")
+
+        items = _df_to_news_items(df)
+        if len(items) == 0 and cached is not None:
+            stale_at = cached.get("fetched_at")
+            if isinstance(stale_at, datetime):
+                return NewsResponse(
+                    items=cached.get("items", []),  # type: ignore[arg-type]
+                    stale=True,
+                    generated_at=stale_at,
+                )
+
+        _news_cache[cache_key] = {"items": items, "fetched_at": now}
+        return NewsResponse(items=items, stale=False, generated_at=now)
     except ValueError as ex:
         if cached is not None:
-            stale_at = cached.get("generated_at")
+            stale_at = cached.get("fetched_at")
             if isinstance(stale_at, datetime):
                 return NewsResponse(
                     items=cached.get("items", []),  # type: ignore[arg-type]
@@ -194,7 +205,7 @@ def get_news(category: str | None = None) -> NewsResponse:
         raise HTTPException(status_code=400, detail=str(ex)) from ex
     except Exception as ex:
         if cached is not None:
-            stale_at = cached.get("generated_at")
+            stale_at = cached.get("fetched_at")
             if isinstance(stale_at, datetime):
                 return NewsResponse(
                     items=cached.get("items", []),  # type: ignore[arg-type]
