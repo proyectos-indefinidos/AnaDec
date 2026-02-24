@@ -6,8 +6,6 @@ COPY apps/api/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY apps/api/src ./src
-COPY src/financeCore ./src/financeCore
-COPY src/dataAccess ./src/dataAccess
 
 EXPOSE 8000
 

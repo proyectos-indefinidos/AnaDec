@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 from .schemas import Period, RateSpec
 
 _PERIOD_TO_CORE = {
@@ -19,12 +16,7 @@ _PERIOD_TO_MONTHS = {
     "ANNUAL": 12,
 }
 
-# Permite reutilizar el dominio existente en /src/financeCore desde apps/api.
-_ROOT_SRC = Path(__file__).resolve().parents[4] / "src"
-if str(_ROOT_SRC) not in sys.path:
-    sys.path.append(str(_ROOT_SRC))
-
-from financeCore.tasa_interes import TasaInteres
+from src.financeCore.tasa_interes import TasaInteres
 
 
 def map_period_to_financecore(period: Period) -> str:

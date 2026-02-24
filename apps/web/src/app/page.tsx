@@ -38,7 +38,7 @@ export default function HomePage() {
 
       <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-3">
         <Link href="/convertidor" className="group">
-          <Card className="h-full rounded-2xl border-0 bg-white p-8 shadow-lg transition-all duration-300 group-hover:shadow-xl">
+          <Card className="h-full rounded-2xl border-0 bg-white p-8 shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:ring-1 group-hover:ring-blue-100">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 transition-colors group-hover:bg-blue-200">
               <RefreshCw className="h-8 w-8 text-blue-600" />
             </div>
@@ -52,7 +52,7 @@ export default function HomePage() {
         </Link>
 
         <Link href="/comparador" className="group">
-          <Card className="h-full rounded-2xl border-0 bg-white p-8 shadow-lg transition-all duration-300 group-hover:shadow-xl">
+          <Card className="h-full rounded-2xl border-0 bg-white p-8 shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:ring-1 group-hover:ring-blue-100">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-green-100 transition-colors group-hover:bg-green-200">
               <Scale className="h-8 w-8 text-green-600" />
             </div>
@@ -66,7 +66,7 @@ export default function HomePage() {
         </Link>
 
         <Link href="/noticias" className="group">
-          <Card className="h-full rounded-2xl border-0 bg-white p-8 shadow-lg transition-all duration-300 group-hover:shadow-xl">
+          <Card className="h-full rounded-2xl border-0 bg-white p-8 shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:ring-1 group-hover:ring-blue-100">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-100 transition-colors group-hover:bg-teal-200">
               <Newspaper className="h-8 w-8 text-teal-600" />
             </div>
