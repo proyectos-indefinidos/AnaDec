@@ -106,7 +106,7 @@ export default function NoticiasPage() {
           {filteredNews.map((item, idx) => {
             const category = currentCategoryLabel(item);
             return (
-              <Card key={`${item.title}-${idx}`} className="group overflow-hidden rounded-2xl border-0 shadow-lg transition-all duration-300 hover:shadow-xl">
+              <Card key={`${item.title}-${idx}`} className="group overflow-hidden rounded-2xl border-0 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:ring-1 hover:ring-blue-100">
                 <div className="aspect-video overflow-hidden bg-gray-100">
                   <img
                     src="https://images.unsplash.com/photo-1554224311-beee460ae6fb?w=600&h=400&fit=crop"
@@ -121,7 +121,7 @@ export default function NoticiasPage() {
                     </span>
                     <span className="text-sm text-gray-500">{item.date || "Sin fecha"}</span>
                   </div>
-                  <h3 className="mb-3 text-xl leading-tight text-gray-900">{item.title}</h3>
+                  <h3 className="mb-3 text-xl leading-tight text-gray-900 transition-colors group-hover:text-blue-700">{item.title}</h3>
                   <p className="mb-2 line-clamp-2 text-gray-600">{item.summary}</p>
                   <p className="mb-4 text-sm text-gray-500">Fuente: {item.source || "N/A"}</p>
                   <a

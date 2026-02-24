@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
@@ -16,15 +14,10 @@ from .schemas import (
     NewsResponse,
 )
 
-# Permite reutilizar el dominio existente en /src/financeCore desde apps/api.
-_ROOT_SRC = Path(__file__).resolve().parents[4] / "src"
-if str(_ROOT_SRC) not in sys.path:
-    sys.path.append(str(_ROOT_SRC))
-
-from dataAccess.newsRepo import NewsRepo
-from financeCore.comparador import Comparador
-from financeCore.convertidor import Convertidor
-from financeCore.tasa_interes import TasaInteres
+from src.dataAccess.newsRepo import NewsRepo
+from src.financeCore.comparador import Comparador
+from src.financeCore.convertidor import Convertidor
+from src.financeCore.tasa_interes import TasaInteres
 
 router = APIRouter()
 
