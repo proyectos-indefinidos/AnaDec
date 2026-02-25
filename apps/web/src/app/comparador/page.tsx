@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CheckCircle, ChevronDown, Plus, Scale, TrendingUp, X } from "lucide-react";
+import { CheckCircle, ChevronDown, Plus, Scale, TrendingUp, X, Pencil } from "lucide-react";
 
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -66,6 +66,15 @@ const colors = [
   { bg: "bg-teal-100", border: "border-teal-200", text: "text-teal-600", chart: "#14b8a6" },
 ];
 
+function formatCOP(value: number): string {
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 type RateInput = {
   id: string;
   value: string;
@@ -105,6 +114,7 @@ function typeLabel(rate: RateInput): string {
 }
 
 export default function ComparadorPage() {
+  const [months, setMonths] = useState<number>(12);
   const [rates, setRates] = useState<RateInput[]>([
     {
       id: "a",
@@ -170,6 +180,31 @@ export default function ComparadorPage() {
       return point;
     });
   }, [result]);
+
+  const sliderProjections = useMemo(() => {
+  if (!result) return [];
+  const baseAmount = 1000000;
+
+  // Calculamos el valor futuro para cada tasa en el mes seleccionado
+  const projections = result.rates.map(rate => {
+    const eaDecimal = rate.effective / 100;
+    // Fórmula para pasar de Efectiva Anual a Efectiva Mensual
+    const emDecimal = Math.pow(1 + eaDecimal, 1 / 12) - 1;
+    
+    const futureValue = baseAmount * Math.pow(1 + emDecimal, months);
+    const differenceFromBase = futureValue - baseAmount;
+
+    return { 
+      id: rate.id,
+      name: rate.name, 
+      futureValue, 
+      differenceFromBase 
+    };
+  });
+
+  // Ordenamos para que el más barato siempre salga primero
+  return projections.sort((a, b) => a.futureValue - b.futureValue);
+}, [result, months]);
 
   const onCompare = async () => {
     const valid = rates.filter((r) => !Number.isNaN(parseFloat(r.value)) && parseFloat(r.value) > 0);
@@ -270,16 +305,20 @@ export default function ComparadorPage() {
                 </Button>
               )}
 
-              <div className="mb-6 flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold ${colors[index % colors.length].bg} ${colors[index % colors.length].text}`}>
+              <div className="mb-6 flex items-center gap-3 group">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-semibold ${colors[index % colors.length].bg} ${colors[index % colors.length].text}`}>
                   {String.fromCharCode(65 + index)}
                 </div>
-                <input
-                  value={rate.name}
-                  onChange={(e) => updateRate(rate.id, "name", e.target.value)}
-                  className="h-auto w-full border-0 p-0 text-xl font-semibold outline-none"
-                  placeholder="Nombre"
-                />
+                <div className="relative w-full">
+                  <input
+                    value={rate.name}
+                    onChange={(e) => updateRate(rate.id, "name", e.target.value)}
+                    className="h-auto w-full cursor-text rounded-md border-b-2 border-transparent bg-transparent py-1 pr-8 text-xl font-bold text-brand-text outline-none transition-all hover:border-brand-pale hover:bg-slate-50 focus:border-brand-action focus:bg-white"
+                    placeholder="Nombre (ej. Banco XYZ)"
+                    title="Haz clic para editar"
+                  />
+                  <Pencil className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-slate opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -358,7 +397,9 @@ export default function ComparadorPage() {
         </div>
 
         {result && (
-          <div className="space-y-8">
+          <div className="space-y-8 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            
+            {/* 1. TARJETA DEL GANADOR */}
             <Card className="rounded-2xl border-0 bg-gradient-to-r from-blue-50 to-green-50 p-8 shadow-xl">
               <div className="mb-6 text-center">
                 <CheckCircle className="mx-auto mb-4 h-16 w-16 text-green-600" />
@@ -370,9 +411,9 @@ export default function ComparadorPage() {
 
               <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                 {result.rates.map((rate, index) => (
-                  <div key={rate.id} className={`rounded-xl bg-white p-4 text-center ${index === result.bestIndex ? "ring-2 ring-green-500" : ""}`}>
+                  <div key={rate.id} className={`rounded-xl bg-white p-4 text-center ${index === result.bestIndex ? "ring-2 ring-green-500 shadow-md" : "border border-slate-100"}`}>
                     <p className="mb-1 text-sm text-gray-600">{rate.name}</p>
-                    <p className={`text-2xl ${colors[index % colors.length].text}`}>{rate.effective.toFixed(4)}%</p>
+                    <p className={`text-2xl font-bold ${colors[index % colors.length].text}`}>{rate.effective.toFixed(4)}%</p>
                     <p className="mt-1 text-xs text-gray-500">efectiva anual</p>
                   </div>
                 ))}
@@ -384,16 +425,70 @@ export default function ComparadorPage() {
               </button>
 
               {showDetails && (
-                <div className="mt-4 rounded-xl bg-white p-6 text-gray-600">
+                <div className="mt-4 rounded-xl bg-white p-6 text-sm text-gray-600 shadow-inner">
                   {result.details.map((line, idx) => (
                     <p key={`${line}-${idx}`} className="mb-2">• {line}</p>
                   ))}
-                  <p className="mt-2 text-sm">Diferencia entre mejor y peor: {result.difference.toFixed(6)} puntos porcentuales.</p>
+                  <p className="mt-4 pt-4 border-t border-slate-100 font-medium">
+                    Diferencia entre mejor y peor: <span className="text-blue-600">{result.difference.toFixed(6)} puntos porcentuales.</span>
+                  </p>
                 </div>
               )}
             </Card>
 
-            <Card className="rounded-2xl border-0 bg-white p-6 shadow-xl md:p-8">
+            {/* 2. NUEVA TARJETA: IMPACTO EN EL MUNDO REAL (SLIDER) */}
+            <Card className="w-full rounded-2xl border-0 bg-white p-6 shadow-xl md:p-8">
+              <div className="mb-6">
+                <h3 className="mb-2 text-2xl font-bold text-gray-900">Impacto en el mundo real</h3>
+                <p className="text-gray-600">
+                  Si el capital fuera de <strong>$1.000.000 COP</strong>, así se vería la diferencia en el <strong>mes {months}</strong>:
+                </p>
+              </div>
+
+              {/* El Slider */}
+              <div className="mb-10">
+                <input
+                  type="range"
+                  min="1"
+                  max="36"
+                  value={months}
+                  onChange={(e) => setMonths(Number(e.target.value))}
+                  className="h-2 w-full appearance-none rounded-lg bg-blue-200 accent-blue-600 cursor-pointer"
+                />
+                <div className="mt-3 flex justify-between text-xs font-medium text-gray-400">
+                  <span>1 mes</span>
+                  <span>1 año</span>
+                  <span>2 años</span>
+                  <span>3 años</span>
+                </div>
+              </div>
+
+              {/* Tarjetas de resultado dinámico */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {sliderProjections.map((proj, index) => (
+                  <div 
+                    key={proj.id} 
+                    className={`relative rounded-xl p-5 border ${index === 0 ? 'border-green-400 bg-green-50/50' : 'border-slate-200 bg-slate-50'}`}
+                  >
+                    <p className="mb-1 font-semibold text-gray-700">{proj.name}</p>
+                    <p className={`text-3xl font-bold mb-2 ${index === 0 ? 'text-green-700' : 'text-gray-900'}`}>
+                      {formatCOP(proj.futureValue)}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Intereses: <span className="font-medium text-gray-700">{formatCOP(proj.differenceFromBase)}</span>
+                    </p>
+                    {index === 0 && (
+                      <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
+                        Mejor opción
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* 3. TARJETA DEL GRÁFICO DE BARRAS */}
+            <Card className="w-full rounded-2xl border-0 bg-white p-6 shadow-xl md:p-8">
               <div className="mb-6 flex items-center gap-2">
                 <TrendingUp className="h-6 w-6 text-blue-600" />
                 <h3 className="text-2xl text-gray-900">Comparación de tasas efectivas</h3>
@@ -403,21 +498,22 @@ export default function ComparadorPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="name" stroke="#6b7280" />
                   <YAxis stroke="#6b7280" />
-                  <Tooltip formatter={(value: number) => `${Number(value).toFixed(4)}%`} />
+                  <Tooltip formatter={(value: any) => `${Number(value).toFixed(4)}%`} />
                   <Bar dataKey="effective" fill="#3b82f6" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Card>
 
-            <Card className="rounded-2xl border-0 bg-white p-6 shadow-xl md:p-8">
-              <h3 className="mb-2 text-2xl text-gray-900">Proyección: Crecimiento de $100 a través del tiempo</h3>
-              <p className="mb-6 text-gray-600">Así crecería tu dinero con cada tasa si inviertes $100 hoy</p>
+            {/* 4. TARJETA DEL GRÁFICO DE LÍNEAS */}
+            <Card className="w-full rounded-2xl border-0 bg-white p-6 shadow-xl md:p-8">
+              <h3 className="mb-2 text-2xl text-gray-900">Proyección a 5 años ($100 base)</h3>
+              <p className="mb-6 text-gray-600">Así crecería una base de $100 con cada tasa de forma anual</p>
               <ResponsiveContainer width="100%" height={350}>
                 <LineChart data={growthData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="year" stroke="#6b7280" />
                   <YAxis stroke="#6b7280" />
-                  <Tooltip formatter={(value: number | string) => `$${Number(value).toFixed(2)}`} />
+                  <Tooltip formatter={(value: any) => `$${Number(value).toFixed(2)}`} />
                   <Legend />
                   {result.rates.map((rate, index) => (
                     <Line
