@@ -96,7 +96,7 @@
    3. TAILWIND THEME INTEGRATION
    ========================================= */
 @theme inline {
-  /* Mapeo de Colores */
+  /* Mapeo de Colores Base */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -141,9 +141,26 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Mapeo de Fuentes (Conservadas de tu Next.js base) */
-  --font-sans: var(--font-geist-sans);
+  /* --- CAMBIO 1: MAPEAMOS LA FUENTE JAKARTA Y TUS COLORES DE COOLORS --- */
+  --font-sans: var(--font-jakarta), Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono);
+
+  --color-brand-pale: #CEE5F2;
+  --color-brand-steel: #7C98B3;
+  --color-brand-slate: #637081;
+  --color-brand-dark: #536B78;
+  --color-brand-jet: #22333B;
+  --color-brand-black: #0A0908;
+  
+  --color-brand-bg: #F6F9FB;
+  --color-brand-text: #0F172A;
+  
+  --color-brand-action: #2563EB;
+  --color-brand-actionHover: #1D4ED8;
+  
+  --color-brand-success: #10B981;
+  --color-brand-successLight: #D1FAE5;
+  /* ---------------------------------------------------------------------- */
 }
 
 /* =========================================
@@ -155,9 +172,9 @@
   }
 
   body {
-    @apply bg-background text-foreground;
-    /* Integramos la fuente de Next.js como base, con Arial como respaldo */
-    font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+    
+    @apply bg-brand-bg text-brand-text;
+    font-family: var(--font-sans);
   }
 
   html {
