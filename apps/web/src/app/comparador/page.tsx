@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CheckCircle, ChevronDown, Plus, Scale, TrendingUp, X } from "lucide-react";
+import { CheckCircle, ChevronDown, Plus, Scale, TrendingUp, X, Pencil } from "lucide-react";
 
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -305,16 +305,20 @@ export default function ComparadorPage() {
                 </Button>
               )}
 
-              <div className="mb-6 flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold ${colors[index % colors.length].bg} ${colors[index % colors.length].text}`}>
+              <div className="mb-6 flex items-center gap-3 group">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-semibold ${colors[index % colors.length].bg} ${colors[index % colors.length].text}`}>
                   {String.fromCharCode(65 + index)}
                 </div>
-                <input
-                  value={rate.name}
-                  onChange={(e) => updateRate(rate.id, "name", e.target.value)}
-                  className="h-auto w-full border-0 p-0 text-xl font-semibold outline-none"
-                  placeholder="Nombre"
-                />
+                <div className="relative w-full">
+                  <input
+                    value={rate.name}
+                    onChange={(e) => updateRate(rate.id, "name", e.target.value)}
+                    className="h-auto w-full cursor-text rounded-md border-b-2 border-transparent bg-transparent py-1 pr-8 text-xl font-bold text-brand-text outline-none transition-all hover:border-brand-pale hover:bg-slate-50 focus:border-brand-action focus:bg-white"
+                    placeholder="Nombre (ej. Banco XYZ)"
+                    title="Haz clic para editar"
+                  />
+                  <Pencil className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-slate opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
               </div>
 
               <div className="space-y-3">
